@@ -1,9 +1,17 @@
 require 'json'
 require 'open-uri'
 
+@data = nil
+
 def body
-  data = JSON.parse(open('https://raw.githubusercontent.com/vuetifyjs/vuetify-helper-json/master/tags.json').read)
-  data.map {|k,v| "    \"#{k}\""}.join " \n"
+  @data ||= JSON.parse(open('https://raw.githubusercontent.com/vuetifyjs/vuetify-helper-json/master/tags.json').read)
+  @data.map {|k,v| "    \"#{k}\""}.join " \n"
+end
+
+def attrhash
+  output = "(setq company-vuetify-hash `("
+  
+  output += @data.map {|k,v| "(\"#{k}\" . ,(list #{v['attributes'].map{|a| "\"#{a}\""}.join(' ') } ))"}.join " \n"
 end
 
 header = <<-EOF 
@@ -41,10 +49,9 @@ header = <<-EOF
 EOF
 
 footer = <<-EOF
-))
 (provide 'company-vuetify-list.el)
 EOF
 
-puts "#{header}#{body}\n#{footer}"
+puts "#{header}#{body}))\n(defun company-vuetify-hash-create () #{attrhash}))\n#{footer}"
 
 

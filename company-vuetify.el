@@ -48,7 +48,29 @@
 (defconst company-vuetify-completions
   (company-vuetify-list-create)
   "Vuetify component names")
- 
+
+(defconst company-vuetify-hash
+  (company-vuetify-hash-create)
+  "Vuetify component attributes")
+
+(defconst company-vuetify-tag-regexp
+  "<\\(v-[[:alnum:]-]+\\)")
+
+(defconst company-vuetify-all-attributes-regexp
+  (concat 
+   "<\\(v-[[:alnum:]-]+\\) "
+   ;; previous tags
+   "\\(?:[[:alnum:]-=\"]+[[:space:]]\\)*"
+   "\\(\\)"))
+
+(defconst company-vuetify-attribute-regexp
+  (concat
+   "<\\(v-\\w*[[:alnum:]-]*\\)[[:space:]]*"
+   ;; previous tags
+   "\\(?:[[:alnum:]-=\"]+[[:space:]]\\)*"
+   ;; match
+   "\\([[:alnum:]-]+\\)"))
+
 (defun company-vuetify (command &optional arg &rest ignored)
   "Provide a backend for company to complete vuetify components.
 
@@ -63,14 +85,20 @@ is a single candidate, as when COMMAND is 'annotation' or
   (case command
     (interactive (company-begin-backend 'company-vuetify-backend))
     (prefix (and (eq major-mode 'vue-html-mode)
-                 (company-grab "v-.*")))
+                 (or (company-grab company-vuetify-tag-regexp 1)
+                     (company-grab company-vuetify-all-attributes-regexp 2)
+                     (company-grab company-vuetify-attribute-regexp 2)
+                     )))
     (candidates
-     (append
-      (remove-if-not
-       (lambda (c) (string-prefix-p  arg c))
-       company-vuetify-completions)
-      ))))
-
+     (cond
+      ((company-grab company-vuetify-tag-regexp 1)
+       (remove-if-not (lambda (c) (string-prefix-p arg c)) company-vuetify-completions))
+      ((company-grab company-vuetify-all-attributes-regexp 2)
+       (cdr (assoc (company-grab company-vuetify-all-attributes-regexp 1) company-vuetify-hash)))
+      ((company-grab company-vuetify-attribute-regexp 2)
+       (let ((tag (company-grab company-vuetify-attribute-regexp 1))
+             (kw (company-grab company-vuetify-attribute-regexp 2)))
+         (remove-if-not (lambda (c) (string-prefix-p kw c)) (cdr (assoc tag company-vuetify-hash)))))))))
 
 ;;;###autoload
 (defun company-vuetify-init ()
